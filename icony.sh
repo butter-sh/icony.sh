@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
 # icony.sh - SVG to Icon Font Generator
-# Version: 1.0.0
-# Generates icon fonts from SVG files using native Linux/Unix tools
+# Version: 2.0.0
+# Generates icon fonts using CSS mask-image with embedded SVG data URLs
 
 set -euo pipefail
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT_DIR="${INPUT_DIR:-$SCRIPT_DIR/icons}"
-OUTPUT_DIR="${OUTPUT_DIR:-$SCRIPT_DIR/dist}"
+INPUT_DIR="${INPUT_DIR:-$PWD/icons}"
+OUTPUT_DIR="${OUTPUT_DIR:-$PWD/dist}"
 FONT_NAME="${FONT_NAME:-iconset}"
-FONT_FAMILY="${FONT_FAMILY:-IconFont}"
+ICON_CLASS="${ICON_CLASS:-icon}"
 
 # Colors
 RED='\033[0;31m'
@@ -46,42 +46,20 @@ log_step() {
 check_dependencies() {
     local deps_status=0
     
-    # Required tools
-    local required=(python3 fontforge)
-    local missing_required=()
-    
-    for dep in "${required[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_required+=("$dep")
-            deps_status=1
-        fi
-    done
-    
-    # Optional but recommended
-    local recommended=(inkscape potrace woff2_compress)
-    local missing_recommended=()
-    
-    for dep in "${recommended[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_recommended+=("$dep")
-        fi
-    done
-    
-    if [[ ${#missing_required[@]} -gt 0 ]]; then
-        log_error "Missing required dependencies: ${missing_required[*]}"
+    # Only Python 3 is required
+    if ! command -v python3 &> /dev/null; then
+        log_error "Missing required dependency: python3"
         echo
-        show_install_instructions "${missing_required[@]}"
+        show_install_instructions
         return 1
     fi
     
-    if [[ ${#missing_recommended[@]} -gt 0 ]]; then
-        log_warn "Missing recommended dependencies: ${missing_recommended[*]}"
-        log_info "Some features may be limited. Install for best results:"
-        show_install_instructions "${missing_recommended[@]}"
-        echo
+    # base64 should be available on all Unix systems
+    if ! command -v base64 &> /dev/null; then
+        log_warn "base64 command not found (unusual)"
     fi
     
-    return $deps_status
+    return 0
 }
 
 # Show installation instructions for dependencies
@@ -96,27 +74,27 @@ show_install_instructions() {
             ubuntu|debian|linuxmint)
                 echo "  ${GREEN}Ubuntu/Debian:${NC}"
                 echo "  sudo apt-get update"
-                echo "  sudo apt-get install python3 fontforge inkscape potrace woff2"
+                echo "  sudo apt-get install python3"
                 ;;
             fedora|rhel|centos)
                 echo "  ${GREEN}Fedora/RHEL/CentOS:${NC}"
-                echo "  sudo dnf install python3 fontforge inkscape potrace woff2"
+                echo "  sudo dnf install python3"
                 ;;
             arch|manjaro)
                 echo "  ${GREEN}Arch Linux:${NC}"
-                echo "  sudo pacman -S python fontforge inkscape potrace woff2"
+                echo "  sudo pacman -S python"
                 ;;
             opensuse*)
                 echo "  ${GREEN}openSUSE:${NC}"
-                echo "  sudo zypper install python3 fontforge inkscape potrace woff2"
+                echo "  sudo zypper install python3"
                 ;;
         esac
     fi
     
     # macOS
     echo
-    echo "  ${GREEN}macOS (Homebrew):${NC}"
-    echo "  brew install python fontforge inkscape potrace woff2"
+    echo "  ${GREEN}macOS:${NC}"
+    echo "  brew install python3"
     
     echo
 }
@@ -145,33 +123,31 @@ def normalize_svg(input_path, output_path):
         root.set('width', '24')
         root.set('height', '24')
         
-        # Get all elements
-        ns = {'svg': 'http://www.w3.org/2000/svg'}
-        
-        # Remove any existing fill/stroke attributes and set currentColor
-        for elem in root.iter():
-            # Remove old color attributes
-            for attr in ['fill', 'stroke', 'color', 'style']:
-                if attr in elem.attrib:
-                    if attr == 'style':
-                        # Remove color-related styles
-                        style = elem.attrib[attr]
-                        style = re.sub(r'fill:[^;]+;?', '', style)
-                        style = re.sub(r'stroke:[^;]+;?', '', style)
-                        if style.strip():
-                            elem.attrib[attr] = style
-                        else:
-                            del elem.attrib[attr]
-                    else:
-                        del elem.attrib[attr]
+        # Remove any existing fill/stroke attributes
+        # for elem in root.iter():
+        #     # Remove color attributes - we'll use currentColor via mask
+        #     for attr in ['fill', 'stroke', 'color', 'style']:
+        #         if attr in elem.attrib:
+        #             if attr == 'style':
+        #                 # Remove color-related styles
+        #                 style = elem.attrib[attr]
+        #                 style = re.sub(r'fill:[^;]+;?', '', style)
+        #                 style = re.sub(r'stroke:[^;]+;?', '', style)
+        #                 if style.strip():
+        #                     elem.attrib[attr] = style
+        #                 else:
+        #                     del elem.attrib[attr]
+        #             else:
+        #                 del elem.attrib[attr]
             
-            # Set currentColor on path, circle, rect, polygon, polyline, ellipse elements
-            tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
-            if tag in ['path', 'circle', 'rect', 'polygon', 'polyline', 'ellipse', 'line']:
-                elem.set('fill', 'currentColor')
+        #     # Set fill to black for mask (mask uses alpha channel)
+        #     # tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+        #     if tag in ['path', 'circle', 'rect', 'polygon', 'polyline', 'ellipse', 'line']:
+        #         elem.set('fill', 'black')
         
         # Write normalized SVG
-        tree.write(output_path, encoding='utf-8', xml_declaration=True)
+        with open(output_path, 'wb') as f:
+            tree.write(f, encoding='utf-8')
         return True
     except Exception as e:
         print(f"Error normalizing {input_path}: {e}", file=sys.stderr)
@@ -180,6 +156,22 @@ def normalize_svg(input_path, output_path):
 if __name__ == '__main__':
     normalize_svg(sys.argv[1], sys.argv[2])
 PYEOF
+}
+
+# Convert SVG to base64 data URL
+svg_to_data_url() {
+    local svg_file="$1"
+    
+    # Read SVG content and encode to base64
+    local svg_content=$(cat "$svg_file")
+    
+    # Remove XML declaration if present
+    # svg_content=$(echo "$svg_content" | sed '/<\?xml/d')
+    
+    # To base64
+   	svg_content=$(echo "$svg_content" | base64 -w 0)
+    
+    echo "data:image/svg+xml;base64,${svg_content}"
 }
 
 # Normalize all SVG files
@@ -200,7 +192,7 @@ normalize_svgs() {
         log_step "Normalizing: $filename"
         
         if normalize_svg "$svg_file" "$temp_dir/$filename"; then
-            ((count++))
+            count=$((count+1))
         else
             log_warn "Failed to normalize: $filename"
         fi
@@ -215,194 +207,96 @@ normalize_svgs() {
     return 0
 }
 
-# Generate font using FontForge Python scripting
-generate_font() {
-    local svg_dir="$1"
-    local output_dir="$2"
-    local font_name="$3"
-    local font_family="$4"
-    
-    log_step "Generating font with FontForge..."
-    
-    python3 - "$svg_dir" "$output_dir" "$font_name" "$font_family" << 'PYEOF'
-import sys
-import os
-import fontforge
-from pathlib import Path
-
-def generate_font(svg_dir, output_dir, font_name, font_family):
-    try:
-        # Create a new font
-        font = fontforge.font()
-        font.fontname = font_name
-        font.familyname = font_family
-        font.fullname = font_family
-        font.encoding = "UnicodeFull"
-        font.em = 1000
-        font.ascent = 800
-        font.descent = 200
-        
-        # Get all SVG files
-        svg_files = sorted(Path(svg_dir).glob("*.svg"))
-        
-        if not svg_files:
-            print("No SVG files found", file=sys.stderr)
-            return False
-        
-        # Starting unicode point (Private Use Area)
-        unicode_point = 0xE000
-        
-        # Import each SVG as a glyph
-        for svg_file in svg_files:
-            try:
-                # Create glyph
-                glyph = font.createChar(unicode_point)
-                glyph.glyphname = svg_file.stem
-                
-                # Import SVG
-                glyph.importOutlines(str(svg_file))
-                
-                # Center and scale glyph
-                glyph.transform([1, 0, 0, 1, 0, 0])
-                
-                # Get bounding box
-                bbox = glyph.boundingBox()
-                if bbox[2] > bbox[0] and bbox[3] > bbox[1]:
-                    width = bbox[2] - bbox[0]
-                    height = bbox[3] - bbox[1]
-                    
-                    # Calculate scale to fit em square
-                    scale = min(800 / width, 800 / height)
-                    
-                    # Scale glyph
-                    glyph.transform([scale, 0, 0, scale, 0, 0])
-                    
-                    # Center horizontally
-                    bbox = glyph.boundingBox()
-                    x_offset = (1000 - (bbox[2] - bbox[0])) / 2 - bbox[0]
-                    glyph.transform([1, 0, 0, 1, x_offset, 0])
-                    
-                    # Set width
-                    glyph.width = 1000
-                
-                print(f"Added glyph: {svg_file.stem} (U+{unicode_point:04X})")
-                unicode_point += 1
-                
-            except Exception as e:
-                print(f"Error importing {svg_file}: {e}", file=sys.stderr)
-                continue
-        
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Generate font files
-        ttf_path = os.path.join(output_dir, f"{font_name}.ttf")
-        woff_path = os.path.join(output_dir, f"{font_name}.woff")
-        svg_path = os.path.join(output_dir, f"{font_name}.svg")
-        
-        print(f"Generating TTF: {ttf_path}")
-        font.generate(ttf_path)
-        
-        print(f"Generating WOFF: {woff_path}")
-        font.generate(woff_path)
-        
-        print(f"Generating SVG: {svg_path}")
-        font.generate(svg_path)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error generating font: {e}", file=sys.stderr)
-        return False
-
-if __name__ == '__main__':
-    svg_dir = sys.argv[1]
-    output_dir = sys.argv[2]
-    font_name = sys.argv[3]
-    font_family = sys.argv[4]
-    
-    success = generate_font(svg_dir, output_dir, font_name, font_family)
-    sys.exit(0 if success else 1)
-PYEOF
-
-    local result=$?
-    
-    if [[ $result -eq 0 ]]; then
-        log_success "Font files generated"
-        
-        # Generate WOFF2 if woff2_compress is available
-        if command -v woff2_compress &> /dev/null; then
-            log_step "Generating WOFF2..."
-            local ttf_file="$output_dir/$font_name.ttf"
-            local woff2_file="$output_dir/$font_name.woff2"
-            
-            if woff2_compress "$ttf_file" 2>/dev/null; then
-                log_success "WOFF2 generated"
-            else
-                log_warn "WOFF2 generation failed (optional)"
-            fi
-        fi
-        
-        return 0
-    else
-        log_error "Font generation failed"
-        return 1
-    fi
-}
-
-# Generate CSS stylesheet with icon mappings
+# Generate CSS stylesheet with mask-image and data URLs
 generate_css() {
     local output_dir="$1"
     local font_name="$2"
     local temp_dir="$(dirname "$output_dir")/temp"
     local css_file="$output_dir/$font_name.css"
     
-    log_step "Generating CSS stylesheet..."
+    log_step "Generating CSS stylesheet with mask-image..."
     
-    # Generate @font-face
+    # Generate base CSS
     cat > "$css_file" << CSSEOF
-@font-face {
-  font-family: '${FONT_FAMILY}';
-  src: url('${font_name}.woff2') format('woff2'),
-       url('${font_name}.woff') format('woff'),
-       url('${font_name}.ttf') format('truetype'),
-       url('${font_name}.svg#${FONT_FAMILY}') format('svg');
-  font-weight: normal;
-  font-style: normal;
-  font-display: block;
+/**
+ * ${font_name} Icon Set
+ * Generated by icony.sh using CSS mask-image
+ * Icons use currentColor for easy theming
+ */
+
+.${ICON_CLASS} {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  
+  /* Mask properties */
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  
+  /* Color from currentColor */
+  background-color: currentColor;
+  
+  /* Allow sizing */
+  font-size: inherit;
 }
 
-.icon {
-  font-family: '${FONT_FAMILY}' !important;
-  font-style: normal;
-  font-weight: normal;
-  font-variant: normal;
-  text-transform: none;
-  line-height: 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  display: inline-block;
-  vertical-align: middle;
+/* Icon size variants */
+.${ICON_CLASS}-xs {
+  width: 0.75em;
+  height: 0.75em;
 }
+
+.${ICON_CLASS}-sm {
+  width: 0.875em;
+  height: 0.875em;
+}
+
+.${ICON_CLASS}-lg {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.${ICON_CLASS}-xl {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.${ICON_CLASS}-2xl {
+  width: 2em;
+  height: 2em;
+}
+
+.${ICON_CLASS}-3xl {
+  width: 3em;
+  height: 3em;
+}
+
+/* Individual icon classes with mask-image data URLs */
 
 CSSEOF
 
-    # Add icon classes with proper unicode mapping
-    local unicode_point=0xE000
+    # Add icon classes with embedded SVG data URLs
+    local icon_count=0
     while IFS= read -r -d '' svg_file; do
         local filename=$(basename "$svg_file" .svg)
-        local unicode_char=$(printf "\\%04x" $unicode_point)
+        local data_url=$(svg_to_data_url "$svg_file")
         
         cat >> "$css_file" << CSSEOF
-.icon-${filename}::before {
-  content: '${unicode_char}';
+.${ICON_CLASS}-${filename} {
+  mask-image: url('${data_url}');
+  -webkit-mask-image: url('${data_url}');
 }
 
 CSSEOF
-        ((unicode_point++))
+        icon_count=$((icon_count+1))
     done < <(find "$temp_dir" -type f -name "*.svg" -print0 | sort -z)
     
-    log_success "CSS generated: $css_file"
+    log_success "CSS generated: $css_file ($icon_count icons)"
 }
 
 # Generate showcase HTML
@@ -424,15 +318,15 @@ generate_showcase() {
     # Generate icon grid HTML
     local icons_html=""
     for icon in "${icons[@]}"; do
-        icons_html+="        <div class=\"icon-card group\">\n"
-        icons_html+="          <i class=\"icon icon-$icon\"></i>\n"
-        icons_html+="          <span class=\"icon-name\">$icon</span>\n"
-        icons_html+="          <button class=\"copy-btn\" onclick=\"copyIconClass('icon-$icon')\" title=\"Copy class name\">\n"
-        icons_html+="            <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n"
-        icons_html+="              <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\" />\n"
-        icons_html+="            </svg>\n"
-        icons_html+="          </button>\n"
-        icons_html+="        </div>\n"
+        icons_html+="        <div class=\"icon-card group\">"
+        icons_html+="          <i class=\"${ICON_CLASS} ${ICON_CLASS}-${icon}\"></i>"
+        icons_html+="          <span class=\"icon-name\">${icon}</span>"
+        icons_html+="          <button class=\"copy-btn\" onclick=\"copyIconClass('${ICON_CLASS}-${icon}')\" title=\"Copy class name\">"
+        icons_html+="            <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">"
+        icons_html+="              <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\" />"
+        icons_html+="            </svg>"
+        icons_html+="          </button>"
+        icons_html+="        </div>"
     done
     
     cat > "$html_file" << 'HTMLEOF'
@@ -441,9 +335,9 @@ generate_showcase() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FONT_FAMILY - Icon Font Showcase</title>
+  <title>FONT_NAME - Icon Set Showcase</title>
   <link rel="stylesheet" href="FONT_NAME.css">
-  <script src="https://cdn.tailwindcss.com/4.0.0-alpha.27"></script>
+  <script src="https://cdn.tailwindcss.com/"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
@@ -466,6 +360,13 @@ generate_showcase() {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      min-height: 120px;
     }
     
     .icon-card::before {
@@ -486,14 +387,23 @@ generate_showcase() {
       opacity: 1;
     }
     
-    .icon-card i {
+    .icon-card .ICON_CLASS {
       font-size: 2.5rem;
       transition: all 0.3s;
+      color: white;
     }
     
-    .icon-card:hover i {
+    .icon-card:hover .ICON_CLASS {
       transform: scale(1.2) rotate(5deg);
       color: #fbbf24;
+    }
+    
+    .icon-name {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 500;
+      text-align: center;
+      word-break: break-word;
     }
     
     .copy-btn {
@@ -502,6 +412,12 @@ generate_showcase() {
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
+      padding: 0.375rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 0.375rem;
+      color: white;
+      cursor: pointer;
     }
     
     .icon-card:hover .copy-btn {
@@ -510,6 +426,7 @@ generate_showcase() {
     
     .copy-btn:hover {
       transform: scale(1.1);
+      background: rgba(255, 255, 255, 0.3);
     }
     
     @keyframes slideInUp {
@@ -545,6 +462,17 @@ generate_showcase() {
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: #a5f3fc;
+      overflow-x: auto;
+    }
   </style>
 </head>
 <body class="p-8">
@@ -554,13 +482,13 @@ generate_showcase() {
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-            FONT_FAMILY
+            FONT_NAME Icon Set
           </h1>
           <p class="text-gray-200 text-lg">
-            Beautiful icon font with <span class="font-bold text-yellow-300">ICON_COUNT icons</span>
+            Beautiful icons using <span class="font-bold text-yellow-300">CSS mask-image</span> • <span class="font-bold">ICON_COUNT icons</span>
           </p>
           <p class="text-gray-300 text-sm mt-1">
-            Generated by icony.sh using FontForge
+            Generated by icony.sh • No web fonts, just CSS + SVG data URLs
           </p>
         </div>
         <div class="flex gap-4">
@@ -577,11 +505,11 @@ generate_showcase() {
       </div>
       
       <!-- Search -->
-      <div class="relative">
+      <div class="relative mb-6">
         <input 
           type="text" 
           id="searchInput" 
-          placeholder="Search icons..." 
+          placeholder="Search icons... (press '/' to focus)" 
           class="w-full px-6 py-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
           oninput="searchIcons(this.value)"
         />
@@ -591,10 +519,27 @@ generate_showcase() {
       </div>
       
       <!-- Usage Example -->
-      <div class="mt-6 p-4 bg-black/20 rounded-xl">
-        <div class="text-sm font-mono text-gray-200">
-          <div class="text-xs text-gray-400 mb-2">Usage:</div>
-          <code class="text-green-300">&lt;i class="icon icon-example"&gt;&lt;/i&gt;</code>
+      <div class="space-y-4">
+        <div class="code-block">
+          <div class="text-xs text-gray-400 mb-2">HTML Usage:</div>
+          <code>&lt;i class="ICON_CLASS ICON_CLASS-example"&gt;&lt;/i&gt;</code>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="code-block">
+            <div class="text-xs text-gray-400 mb-2">Size Variants:</div>
+            <code>&lt;i class="ICON_CLASS ICON_CLASS-heart ICON_CLASS-xs"&gt;&lt;/i&gt;<br>
+&lt;i class="ICON_CLASS ICON_CLASS-heart ICON_CLASS-sm"&gt;&lt;/i&gt;<br>
+&lt;i class="ICON_CLASS ICON_CLASS-heart ICON_CLASS-lg"&gt;&lt;/i&gt;<br>
+&lt;i class="ICON_CLASS ICON_CLASS-heart ICON_CLASS-xl"&gt;&lt;/i&gt;</code>
+          </div>
+          
+          <div class="code-block">
+            <div class="text-xs text-gray-400 mb-2">Color Theming:</div>
+            <code>/* Icons use currentColor */<br>
+.text-red-500 .ICON_CLASS { color: #ef4444; }<br>
+.text-blue-500 .ICON_CLASS { color: #3b82f6; }</code>
+          </div>
         </div>
       </div>
     </div>
@@ -614,8 +559,17 @@ ICON_GRID_HTML
     </div>
     
     <!-- Footer -->
-    <div class="mt-8 text-center text-white/60 text-sm">
-      <p>Generated with ❤️ using icony.sh • FontForge • Python • Bash</p>
+    <div class="mt-8 glass rounded-2xl p-6 text-center text-white">
+      <h3 class="text-lg font-semibold mb-2">🎭 CSS Mask-Image Technology</h3>
+      <p class="text-sm text-gray-200 mb-2">
+        Icons use CSS <code class="px-2 py-1 bg-black/30 rounded">mask-image</code> with embedded SVG data URLs
+      </p>
+      <p class="text-xs text-gray-300">
+        No web fonts needed • Perfect currentColor support • Lightweight • Modern browsers
+      </p>
+      <div class="mt-4 text-xs text-gray-400">
+        Generated with ❤️ using icony.sh • Python • Bash
+      </div>
     </div>
   </div>
 
@@ -651,10 +605,29 @@ ICON_GRID_HTML
       emptyState.classList.toggle('hidden', visibleCount > 0);
     }
 
+    function unsecuredCopyToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Unable to copy to clipboard', err);
+      }
+      document.body.removeChild(textArea);
+    }
+
     function copyIconClass(iconClass) {
-      navigator.clipboard.writeText(iconClass).then(() => {
+      if (window.isSecureContext && navigator.clipboard) {
+        navigator.clipboard.writeText(iconClass).then(() => {
+          showToast();
+        });
+      } else {
+        unsecuredCopyToClipboard(iconClass);
         showToast();
-      });
+      }
     }
 
     function showToast() {
@@ -705,10 +678,10 @@ HTMLEOF
 
     # Replace placeholders
     sed -i "s/FONT_NAME/$font_name/g" "$html_file"
-    sed -i "s/FONT_FAMILY/$FONT_FAMILY/g" "$html_file"
+    sed -i "s/ICON_CLASS/$ICON_CLASS/g" "$html_file"
     sed -i "s/ICON_COUNT/${#icons[@]}/g" "$html_file"
     
-    # Use perl for multiline replacement (more reliable than sed for this)
+    # Use perl for multiline replacement (more reliable)
     perl -i -pe "s|ICON_GRID_HTML|$(echo "$icons_html" | sed 's/[&/\]/\\&/g')|g" "$html_file" 2>/dev/null || {
         # Fallback: use a temp file
         echo "$icons_html" > /tmp/icons_temp.html
@@ -722,7 +695,7 @@ HTMLEOF
 
 # Generate everything
 generate() {
-    log_info "Starting icon font generation..."
+    log_info "Starting icon set generation with CSS mask-image..."
     echo
     
     # Check dependencies
@@ -731,7 +704,7 @@ generate() {
     fi
     
     # Create temp directory
-    local temp_dir="$SCRIPT_DIR/temp"
+    local temp_dir="$PWD/temp"
     rm -rf "$temp_dir"
     mkdir -p "$temp_dir"
     
@@ -742,19 +715,15 @@ generate() {
     fi
     echo
     
-    # Generate font
-    log_step "Step 2: Generating icon font"
+    # Create output directory
+    log_step "Step 2: Preparing output directory"
     rm -rf "$OUTPUT_DIR"
     mkdir -p "$OUTPUT_DIR"
-    
-    if ! generate_font "$temp_dir" "$OUTPUT_DIR" "$FONT_NAME" "$FONT_FAMILY"; then
-        log_error "Font generation failed"
-        return 1
-    fi
+    log_success "Output directory ready"
     echo
     
-    # Generate CSS
-    log_step "Step 3: Generating CSS stylesheet"
+    # Generate CSS with embedded data URLs
+    log_step "Step 3: Generating CSS with mask-image and data URLs"
     generate_css "$OUTPUT_DIR" "$FONT_NAME"
     echo
     
@@ -766,10 +735,14 @@ generate() {
     # Cleanup
     rm -rf "$temp_dir"
     
-    log_success "Icon font generation complete!"
+    log_success "Icon set generation complete!"
     echo
     log_info "Output directory: $OUTPUT_DIR"
-    log_info "Font formats: TTF, WOFF, WOFF2 (if available), SVG"
+    log_info "Technology: CSS mask-image with embedded SVG data URLs"
+    log_info ""
+    log_info "Files generated:"
+    log_info "  • $FONT_NAME.css - Icon stylesheet"
+    log_info "  • index.html - Interactive showcase"
     log_info ""
     log_info "Next steps:"
     log_info "  1. Open $OUTPUT_DIR/index.html to view the showcase"
@@ -846,23 +819,29 @@ SVGEOF
   <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
 </svg>
 SVGEOF
+
+    cat > "$INPUT_DIR/check.svg" << 'SVGEOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+</svg>
+SVGEOF
     
     log_success "Created example icons in $INPUT_DIR"
     echo
-    log_info "Example icons: heart, star, home, settings"
+    log_info "Example icons: heart, star, home, settings, check"
     log_info "Add more SVG files to $INPUT_DIR and run: bash icony.sh generate"
 }
 
 # Show usage
 show_usage() {
     cat << EOF
-${GREEN}icony.sh${NC} - SVG to Icon Font Generator
+${GREEN}icony.sh${NC} - SVG to Icon Set Generator (CSS mask-image)
 
 ${BLUE}USAGE:${NC}
     icony.sh <command> [options]
 
 ${BLUE}COMMANDS:${NC}
-    ${GREEN}generate${NC}    Generate icon font from SVG files
+    ${GREEN}generate${NC}    Generate icon set from SVG files
     ${GREEN}serve${NC}       Serve the showcase with HTTP server (localhost:8080)
     ${GREEN}clean${NC}       Remove generated files
     ${GREEN}init${NC}        Initialize project with example icons
@@ -871,18 +850,18 @@ ${BLUE}COMMANDS:${NC}
 ${BLUE}ENVIRONMENT VARIABLES:${NC}
     INPUT_DIR       SVG input directory (default: ./icons)
     OUTPUT_DIR      Output directory (default: ./dist)
-    FONT_NAME       Font file name (default: iconset)
-    FONT_FAMILY     Font family name (default: IconFont)
+    FONT_NAME       CSS file name (default: iconset)
+    ICON_CLASS      Base icon class name (default: icon)
 
 ${BLUE}EXAMPLES:${NC}
-    # Generate icon font
+    # Generate icon set
     bash icony.sh generate
 
     # Custom input/output directories
     INPUT_DIR=./my-icons OUTPUT_DIR=./build bash icony.sh generate
 
-    # Custom font name and family
-    FONT_NAME=myicons FONT_FAMILY=MyIcons bash icony.sh generate
+    # Custom CSS file and class names
+    FONT_NAME=myicons ICON_CLASS=ico bash icony.sh generate
 
     # Serve showcase
     bash icony.sh serve
@@ -890,33 +869,49 @@ ${BLUE}EXAMPLES:${NC}
     # Clean generated files
     bash icony.sh clean
 
+${BLUE}TECHNOLOGY:${NC}
+    This generator uses CSS ${GREEN}mask-image${NC} with embedded SVG data URLs:
+    
+    • No web fonts needed - pure CSS + SVG
+    • Perfect currentColor support
+    • Lightweight and modern
+    • Works in all modern browsers
+    
+    ${YELLOW}Note:${NC} mask-image is supported in Chrome 120+, Firefox 53+, 
+    Safari 15.4+, Edge 120+
+
 ${BLUE}REQUIREMENTS:${NC}
     Required:
     • python3        - For SVG processing
-    • fontforge      - For font generation
     
-    Optional (recommended):
-    • inkscape       - Better SVG handling
-    • potrace        - Vector tracing
-    • woff2          - WOFF2 compression
+    That's it! No FontForge, no Node.js needed.
 
 ${BLUE}SVG REQUIREMENTS:${NC}
     • SVG files will be automatically normalized to:
       - 24x24px viewBox
-      - currentColor fill
+      - Black fill (for mask)
       - Centered alignment
     • No manual preparation needed!
 
 ${BLUE}OUTPUT:${NC}
-    • Font files (TTF, WOFF, WOFF2*, SVG)
-    • CSS stylesheet with icon classes
-    • Interactive HTML showcase with Tailwind 4
+    • ${FONT_NAME}.css - Icon stylesheet with mask-image
+    • index.html - Interactive showcase with Tailwind 4
     
-    * WOFF2 requires woff2_compress tool
+${BLUE}USAGE IN HTML:${NC}
+    <link rel="stylesheet" href="dist/iconset.css">
+    
+    <i class="icon icon-heart"></i>
+    <i class="icon icon-star icon-lg"></i>
+    <span class="icon icon-home icon-2xl" style="color: red;"></span>
 
-${BLUE}INSTALLATION:${NC}
-    Run ${GREEN}bash icony.sh generate${NC} and it will show
-    installation instructions for missing dependencies.
+${BLUE}SIZE VARIANTS:${NC}
+    • icon-xs   (0.75em)
+    • icon-sm   (0.875em)
+    • icon      (1em - default)
+    • icon-lg   (1.25em)
+    • icon-xl   (1.5em)
+    • icon-2xl  (2em)
+    • icon-3xl  (3em)
 
 EOF
 }
