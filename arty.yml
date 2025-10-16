@@ -1,0 +1,18 @@
+name: "icony.sh"
+version: "1.0.0"
+description: "SVG to icon font generator with web showcase"
+author: ""
+license: "MIT"
+
+# Dependencies from other arty.sh repositories
+references:
+  # Add any dependencies here
+
+# Entry point script
+main: "icony.sh"
+
+# Available commands/scripts
+scripts:
+  generate: "bash icony.sh generate"
+  serve: "bash icony.sh serve"
+  clean: "bash icony.sh clean"

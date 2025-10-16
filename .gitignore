@@ -1,0 +1,20 @@
+# icony.sh specific
+icons/
+dist/
+temp/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+*.tmp
