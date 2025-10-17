@@ -1,12 +1,12 @@
 name: "icony.sh"
-version: "1.0.0"
-description: "SVG to icon font generator with web showcase"
+version: "2.0.0"
+description: "SVG to icon set generator using CSS mask-image"
 author: ""
 license: "MIT"
 
-# Dependencies from other arty.sh repositories
 references:
-  # Add any dependencies here
+- https://github.com/butter-sh/leaf.sh.git
+- https://github.com/butter-sh/judge.sh.git
 
 # Entry point script
 main: "icony.sh"
@@ -16,3 +16,4 @@ scripts:
   generate: "bash icony.sh generate"
   serve: "bash icony.sh serve"
   clean: "bash icony.sh clean"
+  init: "bash icony.sh init"

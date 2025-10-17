@@ -15,13 +15,9 @@ if ! command -v python3 &> /dev/null; then
     missing_deps+=("python3")
 fi
 
-if ! command -v fontforge &> /dev/null; then
-    missing_deps+=("fontforge")
-fi
-
 # Show installation instructions if dependencies are missing
 if [ ${#missing_deps[@]} -gt 0 ]; then
-    echo "⚠️  Missing required dependencies: ${missing_deps[*]}"
+    echo "⚠️  Missing required dependency: python3"
     echo ""
     echo "Installation instructions:"
     echo ""
@@ -32,44 +28,25 @@ if [ ${#missing_deps[@]} -gt 0 ]; then
         case "$ID" in
             ubuntu|debian|linuxmint)
                 echo "  Ubuntu/Debian:"
-                echo "  sudo apt-get update"
-                echo "  sudo apt-get install python3 fontforge"
+                echo "  sudo apt-get install python3"
                 ;;
             fedora|rhel|centos)
                 echo "  Fedora/RHEL/CentOS:"
-                echo "  sudo dnf install python3 fontforge"
+                echo "  sudo dnf install python3"
                 ;;
             arch|manjaro)
                 echo "  Arch Linux:"
-                echo "  sudo pacman -S python fontforge"
+                echo "  sudo pacman -S python"
                 ;;
         esac
     fi
     
     echo ""
-    echo "  macOS (Homebrew):"
-    echo "  brew install python fontforge"
+    echo "  macOS:"
+    echo "  brew install python3"
     echo ""
-fi
-
-# Check for optional dependencies
-optional_deps=()
-
-if ! command -v inkscape &> /dev/null; then
-    optional_deps+=("inkscape")
-fi
-
-if ! command -v potrace &> /dev/null; then
-    optional_deps+=("potrace")
-fi
-
-if ! command -v woff2_compress &> /dev/null; then
-    optional_deps+=("woff2")
-fi
-
-if [ ${#optional_deps[@]} -gt 0 ]; then
-    echo "ℹ️  Optional dependencies (recommended): ${optional_deps[*]}"
-    echo "   Install for better results and WOFF2 support"
+else
+    echo "✓ Python 3 found"
     echo ""
 fi
 
@@ -98,7 +75,13 @@ SVGEOF
 </svg>
 SVGEOF
 
-    echo "✓ Created example icons"
+    cat > icons/check.svg << 'SVGEOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+</svg>
+SVGEOF
+
+    echo "✓ Created 4 example icons"
 fi
 
 # Make icony.sh executable
@@ -106,6 +89,9 @@ chmod +x icony.sh
 
 echo ""
 echo "Setup complete!"
+echo ""
+echo "🎭 This generator uses CSS mask-image technology"
+echo "   No web fonts needed - just Python 3!"
 echo ""
 echo "Quick start:"
 echo "  1. Add SVG files to the 'icons' directory"
