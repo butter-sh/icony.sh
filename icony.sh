@@ -184,8 +184,6 @@ normalize_svgs() {
         return 1
     fi
     
-    mkdir -p "$temp_dir"
-    
     local count=0
     while IFS= read -r -d '' svg_file; do
         local filename=$(basename "$svg_file")
@@ -211,7 +209,6 @@ normalize_svgs() {
 generate_css() {
     local output_dir="$1"
     local font_name="$2"
-    local temp_dir="$(dirname "$output_dir")/temp"
     local css_file="$output_dir/$font_name.css"
     
     log_step "Generating CSS stylesheet with mask-image..."
@@ -294,7 +291,7 @@ CSSEOF
 
 CSSEOF
         icon_count=$((icon_count+1))
-    done < <(find "$temp_dir" -type f -name "*.svg" -print0 | sort -z)
+    done < <(find "$TEMP_DIR" -type f -name "*.svg" -print0 | sort -z)
     
     log_success "CSS generated: $css_file ($icon_count icons)"
 }
@@ -304,7 +301,6 @@ generate_showcase() {
     local output_dir="$1"
     local font_name="$2"
     local html_file="$output_dir/index.html"
-    local temp_dir="$(dirname "$output_dir")/temp"
     
     log_step "Generating showcase HTML..."
     
@@ -313,7 +309,7 @@ generate_showcase() {
     while IFS= read -r -d '' svg_file; do
         local filename=$(basename "$svg_file" .svg)
         icons+=("$filename")
-    done < <(find "$temp_dir" -type f -name "*.svg" -print0 | sort -z)
+    done < <(find "$TEMP_DIR" -type f -name "*.svg" -print0 | sort -z)
     
     # Generate icon grid HTML
     local icons_html=""
@@ -704,13 +700,13 @@ generate() {
     fi
     
     # Create temp directory
-    local temp_dir="$PWD/temp"
-    rm -rf "$temp_dir"
-    mkdir -p "$temp_dir"
+    TEMP_DIR="$(dirname $OUTPUT_DIR)/temp"
+    rm -rf "$TEMP_DIR"
+    mkdir -p "$TEMP_DIR"
     
     # Normalize SVGs
     log_step "Step 1: Normalizing SVG files"
-    if ! normalize_svgs "$INPUT_DIR" "$temp_dir"; then
+    if ! normalize_svgs "$INPUT_DIR" "$TEMP_DIR"; then
         return 1
     fi
     echo
@@ -733,7 +729,7 @@ generate() {
     echo
     
     # Cleanup
-    rm -rf "$temp_dir"
+    rm -rf "$TEMP_DIR"
     
     log_success "Icon set generation complete!"
     echo
