@@ -7,13 +7,11 @@ license: "MIT"
 references:
 - https://github.com/butter-sh/leaf.sh.git
 - https://github.com/butter-sh/judge.sh.git
+- https://github.com/butter-sh/myst.sh.git
 
 # Entry point script
 main: "icony.sh"
 
 # Available commands/scripts
 scripts:
-  generate: "bash icony.sh generate"
-  serve: "bash icony.sh serve"
-  clean: "bash icony.sh clean"
-  init: "bash icony.sh init"
+  test: arty exec judge run
