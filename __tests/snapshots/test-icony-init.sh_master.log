@@ -4,41 +4,41 @@
 [0;36m═══════════════════════════════════════════════════════[0m
 
 ℹ Initializing icony project...
-✓ Created example icons in /tmp/tmp.WL7cMIMwJ5/icons
+✓ Created example icons in /tmp/tmp.Dd4dpTGq7P/icons
 
 ℹ Example icons: heart, star, home, settings, check
-ℹ Add more SVG files to /tmp/tmp.WL7cMIMwJ5/icons and run: bash icony.sh generate
+ℹ Add more SVG files to /tmp/tmp.Dd4dpTGq7P/icons and run: bash icony.sh generate
 [0;32m[PASS][0m Should create icons directory
 ℹ Initializing icony project...
-✓ Created example icons in /tmp/tmp.GL6IBr1o7D/icons
+✓ Created example icons in /tmp/tmp.xCNGZQFKdM/icons
 
 ℹ Example icons: heart, star, home, settings, check
-ℹ Add more SVG files to /tmp/tmp.GL6IBr1o7D/icons and run: bash icony.sh generate
+ℹ Add more SVG files to /tmp/tmp.xCNGZQFKdM/icons and run: bash icony.sh generate
 [0;32m[PASS][0m Should create heart.svg
 [0;32m[PASS][0m Should create star.svg
 [0;32m[PASS][0m Should create home.svg
 [0;32m[PASS][0m Should create settings.svg
 [0;32m[PASS][0m Should create check.svg
 ℹ Initializing icony project...
-✓ Created example icons in /tmp/tmp.YTdew88sIA/icons
+✓ Created example icons in /tmp/tmp.NtzKJ9ijV2/icons
 
 ℹ Example icons: heart, star, home, settings, check
-ℹ Add more SVG files to /tmp/tmp.YTdew88sIA/icons and run: bash icony.sh generate
+ℹ Add more SVG files to /tmp/tmp.NtzKJ9ijV2/icons and run: bash icony.sh generate
 [0;32m[PASS][0m SVG should have xmlns attribute
 [0;32m[PASS][0m SVG should have viewBox attribute
 [0;32m[PASS][0m SVG should have path element
 ℹ Initializing icony project...
-✓ Created example icons in /tmp/tmp.8UD5nEgV8e/custom-icons
+✓ Created example icons in /tmp/tmp.op0CQLUP0e/custom-icons
 
 ℹ Example icons: heart, star, home, settings, check
-ℹ Add more SVG files to /tmp/tmp.8UD5nEgV8e/custom-icons and run: bash icony.sh generate
+ℹ Add more SVG files to /tmp/tmp.op0CQLUP0e/custom-icons and run: bash icony.sh generate
 [0;32m[PASS][0m Should create custom icons directory
 [0;32m[PASS][0m Should create heart.svg in custom dir
 ℹ Initializing icony project...
-✓ Created example icons in /tmp/tmp.GlCVohdaPV/icons
+✓ Created example icons in /tmp/tmp.52kCLNNyz3/icons
 
 ℹ Example icons: heart, star, home, settings, check
-ℹ Add more SVG files to /tmp/tmp.GlCVohdaPV/icons and run: bash icony.sh generate
+ℹ Add more SVG files to /tmp/tmp.52kCLNNyz3/icons and run: bash icony.sh generate
 [0;32m[PASS][0m Should not error on second init
 
 [0;36m═══════════════════════════════════════════════════════[0m
