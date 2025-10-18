@@ -10,6 +10,11 @@ if ! declare -f assert_contains > /dev/null; then
     exit 1
 fi
 
+# Helper to check if path does not exist
+path_not_exists() {
+    ! [[ -e "$1" ]]
+}
+
 # Setup before each test
 setup() {
     TEST_DIR=$(mktemp -d)
@@ -130,7 +135,11 @@ test_clean_command() {
     
     bash "$ICONY_SH" clean 2>&1 >/dev/null
     
-    assert_not_exists "$OUTPUT_DIR" "Clean should remove output directory"
+    if path_not_exists "$OUTPUT_DIR"; then
+        pass "Clean should remove output directory"
+    else
+        fail "Clean should remove output directory"
+    fi
     
     teardown
 }
@@ -144,7 +153,11 @@ test_clean_short_form() {
     
     bash "$ICONY_SH" c 2>&1 >/dev/null
     
-    assert_not_exists "$OUTPUT_DIR" "Short form 'c' should work for clean"
+    if path_not_exists "$OUTPUT_DIR"; then
+        pass "Short form 'c' should work for clean"
+    else
+        fail "Short form 'c' should work for clean"
+    fi
     
     teardown
 }
@@ -235,8 +248,13 @@ EOF
     export ICON_CLASS="my-icon"
     bash "$ICONY_SH" generate 2>&1 >/dev/null
     
-    local css_content=$(cat "$OUTPUT_DIR/iconset.css")
-    assert_contains "$css_content" ".my-icon" "Should use ICON_CLASS environment variable"
+    # Check if CSS file exists first
+    if [[ -f "$OUTPUT_DIR/iconset.css" ]]; then
+        local css_content=$(cat "$OUTPUT_DIR/iconset.css")
+        assert_contains "$css_content" ".my-icon" "Should use ICON_CLASS environment variable"
+    else
+        fail "CSS file not generated"
+    fi
     
     teardown
 }

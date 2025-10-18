@@ -1,0 +1,31 @@
+
+[0;36m═══════════════════════════════════════════════════════[0m
+[0;36m  SVG Normalization Tests[0m
+[0;36m═══════════════════════════════════════════════════════[0m
+
+[0;32m[PASS][0m Should normalize and generate CSS
+[0;32m[PASS][0m Should include normalized icon
+[0;32m[PASS][0m Should normalize SVG without dimensions
+[0;32m[PASS][0m Should handle complex paths
+[0;32m[PASS][0m Should encode to data URL
+[0;32m[PASS][0m Should handle multiple elements
+[0;32m[PASS][0m Should handle namespaced attributes
+[0;32m[PASS][0m Should handle embedded styles
+[0;32m[PASS][0m Should handle grouped elements
+[0;32m[PASS][0m Should handle transforms
+[0;31m[FAIL][0m Should report normalization failure
+  Expected to contain: Failed to normalize
+[0;32m[PASS][0m Should still process valid icons
+/home/valknar/Projects/hammer.sh/templates/icony/__tests/test-icony-svg-processing.sh: Zeile 233: assert_not_equals: Kommando nicht gefunden.
+[0;32m[PASS][0m Decoded data should contain SVG
+
+[0;36m═══════════════════════════════════════════════════════[0m
+[0;36m  TEST SUMMARY[0m
+[0;36m═══════════════════════════════════════════════════════[0m
+
+  Total Tests:  13
+  [0;32mPassed:       12[0m
+  [0;31mFailed:       1[0m
+  Pass Rate:    92%
+
+[0;31m✗ Some tests failed[0m

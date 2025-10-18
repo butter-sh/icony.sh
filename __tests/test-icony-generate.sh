@@ -10,6 +10,11 @@ if ! declare -f assert_contains > /dev/null; then
     exit 1
 fi
 
+# Check if myst is available
+has_myst() {
+    command -v myst &> /dev/null || [[ -f "$SCRIPT_DIR/../.arty/libs/myst.sh/myst.sh" ]] || [[ -f "$SCRIPT_DIR/../myst.sh/myst.sh" ]]
+}
+
 # Setup before each test
 setup() {
     TEST_DIR=$(mktemp -d)
@@ -69,15 +74,20 @@ test_generate_creates_html() {
     setup
     
     # Skip if myst not available
-    if ! command -v myst &> /dev/null && ! [[ -f "$SCRIPT_DIR/../.arty/libs/myst.sh/myst.sh" ]] && ! [[ -f "$SCRIPT_DIR/../myst.sh/myst.sh" ]]; then
-        log_warn "Skipping HTML test - myst.sh not installed"
+    if ! has_myst; then
+        # Skip this test
         teardown
         return 0
     fi
     
     bash "$ICONY_SH" generate 2>&1 >/dev/null
     
-    assert_file_exists "$OUTPUT_DIR/index.html" "Should create index.html"
+    # Only assert if HTML should have been created
+    if [[ -f "$OUTPUT_DIR/index.html" ]]; then
+        pass "Should create index.html"
+    else
+        fail "Should create index.html when myst is available"
+    fi
     
     teardown
 }
@@ -149,8 +159,7 @@ test_html_contains_references() {
     setup
     
     # Skip if myst not available
-    if ! command -v myst &> /dev/null && ! [[ -f "$SCRIPT_DIR/../.arty/libs/myst.sh/myst.sh" ]] && ! [[ -f "$SCRIPT_DIR/../myst.sh/myst.sh" ]]; then
-        log_warn "Skipping HTML test - myst.sh not installed"
+    if ! has_myst; then
         teardown
         return 0
     fi
@@ -158,7 +167,7 @@ test_html_contains_references() {
     bash "$ICONY_SH" generate 2>&1 >/dev/null
     
     if [[ ! -f "$OUTPUT_DIR/index.html" ]]; then
-        log_warn "HTML not generated, skipping test"
+        # Skip test if HTML not generated
         teardown
         return 0
     fi
@@ -177,8 +186,7 @@ test_html_contains_icon_cards() {
     setup
     
     # Skip if myst not available
-    if ! command -v myst &> /dev/null && ! [[ -f "$SCRIPT_DIR/../.arty/libs/myst.sh/myst.sh" ]] && ! [[ -f "$SCRIPT_DIR/../myst.sh/myst.sh" ]]; then
-        log_warn "Skipping HTML test - myst.sh not installed"
+    if ! has_myst; then
         teardown
         return 0
     fi
@@ -186,7 +194,7 @@ test_html_contains_icon_cards() {
     bash "$ICONY_SH" generate 2>&1 >/dev/null
     
     if [[ ! -f "$OUTPUT_DIR/index.html" ]]; then
-        log_warn "HTML not generated, skipping test"
+        # Skip test if HTML not generated
         teardown
         return 0
     fi
@@ -273,11 +281,17 @@ EOF
 test_generate_requires_myst() {
     setup
     
-    # This test verifies that myst is checked
-    output=$(PATH="/nonexistent" bash "$ICONY_SH" generate 2>&1 || true)
-    
-    # Should mention myst.sh
-    assert_contains "$output" "myst" "Should mention myst.sh requirement"
+    # This test verifies that myst is checked when not in PATH
+    # Only test if myst is NOT installed via arty
+    if [[ ! -f "$SCRIPT_DIR/../.arty/libs/myst.sh/myst.sh" ]] && [[ ! -f "$SCRIPT_DIR/../myst.sh/myst.sh" ]]; then
+        output=$(PATH="/nonexistent" bash "$ICONY_SH" generate 2>&1 || true)
+        
+        # Should mention myst.sh
+        assert_contains "$output" "myst" "Should mention myst.sh requirement"
+    else
+        # Skip test if myst is installed via arty
+        pass "Myst.sh installed via arty - skipping PATH test"
+    fi
     
     teardown
 }

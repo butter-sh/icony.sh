@@ -1,0 +1,45 @@
+
+[0;36m═══════════════════════════════════════════════════════[0m
+[0;36m  Integration Tests[0m
+[0;36m═══════════════════════════════════════════════════════[0m
+
+[0;32m[PASS][0m Init should create icons directory
+[0;32m[PASS][0m Generate should create CSS
+[0;31m[FAIL][0m Generate should create HTML with myst
+  File not found: /tmp/tmp.c7Fx2csUJR/dist/index.html
+/home/valknar/Projects/hammer.sh/templates/icony/__tests/test-icony-integration.sh: Zeile 57: pass: Kommando nicht gefunden.
+[0;32m[PASS][0m CSS should contain icon1
+[0;32m[PASS][0m CSS should contain icon2
+[0;32m[PASS][0m CSS should contain icon3
+[0;32m[PASS][0m CSS should contain icon4
+[0;32m[PASS][0m CSS should contain icon5
+[0;32m[PASS][0m CSS should contain icon6
+[0;32m[PASS][0m CSS should contain icon7
+[0;32m[PASS][0m CSS should contain icon8
+[0;32m[PASS][0m CSS should contain icon9
+[0;32m[PASS][0m CSS should contain icon10
+[0;32m[PASS][0m Should handle hyphenated names
+[0;32m[PASS][0m Should handle underscored names
+[0;32m[PASS][0m Should still have first icon
+[0;32m[PASS][0m Should have second icon
+/home/valknar/Projects/hammer.sh/templates/icony/__tests/test-icony-integration.sh: Zeile 148: assert_not_equals: Kommando nicht gefunden.
+[0;32m[PASS][0m Should report no SVG files
+[0;32m[PASS][0m Should have CSS comment header
+[0;32m[PASS][0m Should have base icon class
+[0;32m[PASS][0m Should have closing braces
+[0;32m[PASS][0m Should have mask-image properties
+[0;32m[PASS][0m Should use custom input dir
+[0;32m[PASS][0m Should use custom output dir
+[0;32m[PASS][0m Should use custom font name
+[0;32m[PASS][0m Should use custom icon class
+
+[0;36m═══════════════════════════════════════════════════════[0m
+[0;36m  TEST SUMMARY[0m
+[0;36m═══════════════════════════════════════════════════════[0m
+
+  Total Tests:  26
+  [0;32mPassed:       25[0m
+  [0;31mFailed:       1[0m
+  Pass Rate:    96%
+
+[0;31m✗ Some tests failed[0m
