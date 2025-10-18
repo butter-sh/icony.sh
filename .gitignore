@@ -1,8 +1,5 @@
-# icony.sh specific
-icons/
-dist/
-temp/
-*.log
+# arty.sh specific
+.arty/
 
 # OS files
 .DS_Store
@@ -17,4 +14,5 @@ Thumbs.db
 
 # Temporary files
 tmp/
+temp/
 *.tmp

@@ -9,83 +9,65 @@ generate_showcase() {
     # Collect icon names
     local icons=()
     while IFS= read -r -d '' svg_file; do
-        local filename=$(basename "$svg_file" .svg)
+        local filename=$(basename "$svg_file" .svg")
         icons+=("$filename")
     done < <(find "$TEMP_DIR" -type f -name "*.svg" -print0 | sort -z)
     
     # Generate icon grid HTML
     local icons_html=""
     for icon in "${icons[@]}"; do
-        icons_html+="      <div class=\"icon-card group\">\n"
-        icons_html+="        <i class=\"${ICON_CLASS} ${ICON_CLASS}-${icon}\"></i>\n"
-        icons_html+="        <span class=\"icon-name\">${icon}</span>\n"
-        icons_html+="        <button class=\"copy-btn\" onclick=\"copyIconClass('${ICON_CLASS}-${icon}')\" title=\"Copy class name\">\n"
-        icons_html+="          <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n"
-        icons_html+="            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\" />\n"
-        icons_html+="          </svg>\n"
-        icons_html+="        </button>\n"
-        icons_html+="      </div>\n"
+        icons_html+="        <div class=\"icon-card group\">"
+        icons_html+="          <i class=\"${ICON_CLASS} ${ICON_CLASS}-${icon}\"></i>"
+        icons_html+="          <span class=\"icon-name\">${icon}</span>"
+        icons_html+="          <button class=\"copy-btn\" onclick=\"copyIconClass('${ICON_CLASS}-${icon}')\" title=\"Copy class name\">"
+        icons_html+="            <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">"
+        icons_html+="              <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\" />"
+        icons_html+="            </svg>"
+        icons_html+="          </button>"
+        icons_html+="        </div>"
     done
     
     # Check if myst.sh is available (installed via arty.sh dependencies)
     local use_myst=false
-    local myst_cmd=""
-    
-    # Try to find myst.sh in various locations
-    if [[ -f "$SCRIPT_DIR/.arty/libs/myst.sh/myst.sh" ]]; then
-        myst_cmd="bash $SCRIPT_DIR/.arty/libs/myst.sh/myst.sh"
+    if [[ -f "$SCRIPT_DIR/myst.sh/myst.sh" ]] && [[ -f "$SCRIPT_DIR/index.html.myst" ]]; then
         use_myst=true
-    elif [[ -f "$SCRIPT_DIR/myst.sh/myst.sh" ]]; then
-        myst_cmd="bash $SCRIPT_DIR/myst.sh/myst.sh"
+        log_info "Using myst.sh templating engine"
+    elif command -v myst >/dev/null 2>&1 && [[ -f "$SCRIPT_DIR/index.html.myst" ]]; then
         use_myst=true
-    elif command -v myst >/dev/null 2>&1; then
-        myst_cmd="myst"
-        use_myst=true
-    fi
-    
-    # Verify we have the template file
-    if [[ "$use_myst" == true ]] && [[ ! -f "$SCRIPT_DIR/index.html.myst" ]]; then
-        log_warn "myst.sh found but index.html.myst template missing"
-        use_myst=false
+        log_info "Using myst.sh templating engine (from PATH)"
     fi
     
     if [[ "$use_myst" == true ]]; then
-        log_info "Using myst.sh templating engine"
-        
-        # Create temporary JSON file for myst variables
-        local temp_vars=$(mktemp)
-        cat > "$temp_vars" << JSONEOF
-{
-  "font_name": "$font_name",
-  "icon_class": "$ICON_CLASS",
-  "icon_count": ${#icons[@]},
-  "myst_enabled": true
-}
-JSONEOF
+        # Use myst.sh to render the template
+        local myst_cmd
+        if [[ -f "$SCRIPT_DIR/myst.sh/myst.sh" ]]; then
+            myst_cmd="bash $SCRIPT_DIR/myst.sh/myst.sh"
+        else
+            myst_cmd="myst"
+        fi
         
         # Create temporary file for icon grid HTML
         local temp_icons_html=$(mktemp)
-        echo -e "$icons_html" > "$temp_icons_html"
+        echo "$icons_html" > "$temp_icons_html"
         
         # Render with myst.sh
-        if $myst_cmd render "$SCRIPT_DIR/index.html.myst" \
-            --vars "$temp_vars" \
-            --set icon_grid_html="$(cat $temp_icons_html)" \
-            --output "$html_file" 2>/dev/null; then
-            log_success "Showcase generated with myst.sh: $html_file"
-        else
+        $myst_cmd render "$SCRIPT_DIR/index.html.myst" \
+            -v font_name="$font_name" \
+            -v icon_class="$ICON_CLASS" \
+            -v icon_count="${#icons[@]}" \
+            -v icon_grid_html="$icons_html" \
+            -v myst_enabled="true" \
+            -o "$html_file" 2>/dev/null || {
             log_warn "myst.sh rendering failed, falling back to bash generation"
             use_myst=false
-        fi
+        }
         
-        rm -f "$temp_vars" "$temp_icons_html"
+        rm -f "$temp_icons_html"
     fi
     
     # Fallback to bash generation if myst.sh not available or failed
     if [[ "$use_myst" != true ]]; then
-        log_info "Using bash template generation"
-        
-        # Use the bash-based HTML generation
+        # Original bash generation code
         cat > "$html_file" << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -438,13 +420,15 @@ HTMLEOF
         sed -i "s/ICON_CLASS/$ICON_CLASS/g" "$html_file"
         sed -i "s/ICON_COUNT/${#icons[@]}/g" "$html_file"
         
-        # Replace icon grid HTML
-        # Use a temp file to avoid issues with special characters
-        echo -e "$icons_html" > /tmp/icons_temp.html
-        sed -i "/ICON_GRID_HTML/r /tmp/icons_temp.html" "$html_file"
-        sed -i "/ICON_GRID_HTML/d" "$html_file"
-        rm -f /tmp/icons_temp.html
-        
-        log_success "Showcase generated: $html_file"
+        # Use perl for multiline replacement (more reliable)
+        perl -i -pe "s|ICON_GRID_HTML|$(echo "$icons_html" | sed 's/[&/\]/\\&/g')|g" "$html_file" 2>/dev/null || {
+            # Fallback: use a temp file
+            echo "$icons_html" > /tmp/icons_temp.html
+            sed -i "/ICON_GRID_HTML/r /tmp/icons_temp.html" "$html_file"
+            sed -i "/ICON_GRID_HTML/d" "$html_file"
+            rm -f /tmp/icons_temp.html
+        }
     fi
+    
+    log_success "Showcase generated: $html_file"
 }

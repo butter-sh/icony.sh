@@ -14,4 +14,7 @@ main: "icony.sh"
 
 # Available commands/scripts
 scripts:
-  test: arty exec judge run
+  test: "arty exec judge run"
+  test/update: "arty exec judge run -u"
+  test/setup: "arty exec judge setup"
+  test/verbose: "arty exec judge run -v"
